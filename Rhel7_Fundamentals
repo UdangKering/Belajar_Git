@@ -38,7 +38,6 @@ u → undo
 n → mencari kata string berikutnya
 :%s/string_awal/string_pengganti/g
 
-
 ===manajemen disk===
 
 1. membuat partisi disk → fdisk
@@ -69,3 +68,110 @@ q → keluar tanpa menyimpan
 # df -h
 # umount /dev/sdb1
 # df -h
+
+===Manajemen Paket===
+
+Repository → Database paket + index
+Manajemen paket → yum
+
+File konfigurasi repositori → /etc/yum.repos.d/*.repo
+
+---Konfigurasi Repo ke DVD---
+
+1. Buat direktori mount point DVD
+
+# mkdir /media/cdrom
+
+2. Mount DVD RHEL
+
+# mount /dev/cdrom /media/cdrom
+# df -h
+
+3. Buat file konfigurasi repo
+
+# cd /etc/yum.repos.d/
+# vi rhel7-dvd.repo
+
+[rhel7-dvd]
+name=Red Hat Enterprise Linux 7 DVD
+baseurl=file:///media/cdrom
+enabled=1
+gpgcheck=0
+
+# yum repolist
+# yum search nano
+# yum install nano
+# yum list | more
+
+===Konfigurasi Jaringan===
+
+1. Colok kabel UTP
+
+# dmesg | grep enp
+
+# nmtui
+
+IP: 10.0.0.2x/24
+Gateway: 10.0.0.1
+DNS1: 8.8.8.8
+DNS2: 8.8.4.4
+
+[X] Automatically connected
+
+# ip addr → Cek alamat IP
+# ip route → Cek default gateway
+# cat /etc/resolv.conf → Cek DNS resolver
+
+# ping 10.0.0.2x
+# ping 10.0.0.1
+# ping 8.8.8.8
+# ping 10.0.0.20
+
+–-Test service network (httpd)---
+
+# yum install httpd
+# systemctl start httpd
+# systemctl status httpd
+
+# systemctl stop firewalld
+# systemctl disable firewalld
+# systemctl status firewalld
+
+Browsing dari Host OS laptop ke RHEL Server
+http://10.0.0.2x
+
+
+===SSH Service===
+
+# systemctl status sshd
+
+Test SSH dari Hos OS laptop ke RHEL 7 Server
+
+---SSH Tanpa Password (Key Public)---
+
+---Generate Key Public di Host OS Laptop (Linux)---
+
+$ ssh-keygen
+$ ls -lh ~/.ssh/
+
+---Copy Key Public ke server SSH di Host OS Laptop (Linux)---
+
+$ ssh-copy-id -i ~/.ssh/id_rsa.pub root@10.0.0.2x
+
+Test SSH dari Hos OS laptop ke RHEL 7 Server
+
+---Transfer File lewat SCP---
+
+SCP dari Host OS ke Server
+
+scp -r /etc/passwd root@10.0.0.2x:/root/
+
+SSH ke Server
+
+# ls -lh /root
+
+SCP dari Server ke Host OS
+
+scp -r root@10.0.0.2x:/etc/redhat-release ~/
+
+
