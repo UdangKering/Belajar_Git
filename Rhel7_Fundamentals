@@ -1,0 +1,71 @@
+===shell & manajemen file & directory===
+
+whoami → cek user aktiv
+pwd → print working directory
+cd → change directory
+mkdir → make directory
+rmdir → remove empty directory
+
+ls → listing directory
+
+[command] --help
+man [command]
+
+touch → membuat file kosong
+rm → menghapus file/dir
+cp → copy file/dir
+mv → move/rename file/dir
+
+file → melihat tipe file
+
+===editor teks vi===
+
+cat → menampilkan isi file teks
+
+command vi
+i → masuk ke mode edit
+esc → kembali ke mode command
+:w [namafile] → simpan file
+:q! → keluar
+:wq → simpan dan keluar
+yy → copy 1 baris di posisi kursor
+3yy → copy 3 baris mulai dari posisi kursor ke bawah
+dd → delete/cut 1 baris di posisi kursor
+3yy → delete/cut 3 baris mulai dari posisi kursor ke bawah
+u → undo
+:redo → redo
+/[string] → mencari kata string
+n → mencari kata string berikutnya
+:%s/string_awal/string_pengganti/g
+
+
+===manajemen disk===
+
+1. membuat partisi disk → fdisk
+# fdisk -l
+# fdisk /dev/sdb
+p → menampilkan skema partisi
+g → create partition table gpt
+n → membuat partisi baru
+w → menyimpan skema partisi
+q → keluar tanpa menyimpan
+
+# partprobe → kernel membaca skema partisi baru
+# fdisk -l
+
+2. membuat file system → ext4, xfs
+
+# mkfs.xfs -L DATA /dev/sdb1
+
+3. mount → /etc/fstab
+
+# mkdir /mnt/data → directory mount point
+# vi /etc/fstab
+
+/dev/sdb1 /mnt/data xfs defaults 0 0
+
+# mount /dev/sdb1
+# mount
+# df -h
+# umount /dev/sdb1
+# df -h
