@@ -3,3 +3,24 @@ cd	= change directory
 mkdir	= make directory
 rmdir	= remove empety directory
 
+
+
+
+==editor vi==
+command	> edit (i)
+edit 	> command (esc)
+
+:w [nama file]
+:q!	= quit
+:wq!	= save and quit
+
+[mode command]
+yy	= copy 1 baris
+dd	= delete / cut 1 baris
+p	= paste
+u	= undo
+:redo	= redo
+
+
+
+
