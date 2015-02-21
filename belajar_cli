@@ -1,0 +1,5 @@
+pwd 	= print working directory
+cd	= change directory
+mkdir	= make directory
+rmdir	= remove empety directory
+
