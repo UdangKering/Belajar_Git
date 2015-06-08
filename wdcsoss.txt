@@ -1,0 +1,533 @@
+﻿===Cakupan Keamanan Pusat Data===
+
+Organizational security → Kebijakan Organisasi
+Personnel security → Personil keamanan, personil IT, personil maintenance
+Physical security → Access control, lingkungan (suhu, kelembaban)
+Operational Security → Maintenance perangkat
+Data, Network, OS, Applications Security → Dapat menggunakan OSS
+Disaster recovery
+
+
+====Instalasi OS: CentOS 7===
+
+~ Jangan hubungkan server ke internet saat/setelah instalasi. Hubungkan ke internet/ip publik setelah yakin aman.
+~ Partisi Disk:
+/ → 90 GB (xfs)
+swap → 10 GB
+~ Paket: Minimal
+~ Password root: pakai password yang strong (minimal 8 karakter kombinasi huruf kapital, huruf normal, angka dan tanda baca)
+
+====Membuat password acak dari /dev/urandom====
+< /dev/urandom tr -dc _A-Z-a-z-0-9-”*” | head -c${1:-32}; echo;
+
+===Konfigurasi Network===
+# nmtui
+
+===Konfigurasi Repo DVD===
+
+# mkdir /media/cdrom
+# mount /dev/sr0 /media/cdrom
+# cp -r /etc/yum.repos.d /etc/yum.repos.d.orig
+# rm /etc/yum.repos.d/*
+# vi /etc/yum.repos.d/centos-dvd.repo
+
+[centos-dvd]
+name=Centos 7 DVD
+baseurl=file:///media/cdrom
+enabled=1
+gpgcheck=0
+
+# yum repolist
+
+
+===Enkripsi Disk===
+
+1. Power off virtual server
+2. Tambah disk2 100 GB
+3. Power on virtual server
+4. Verifikasi disk2
+# fdisk -l
+
+5. Buat partisi baru di /dev/sdb
+# fdisk /dev/sdb
+# partprobe
+
+6. Instal paket cryptsetup
+# yum install crypsetup
+
+7. Set password enkripsi
+# cryptsetup luksFormat /dev/sdb1
+Are you sure? YES
+passphrase: !)@(#*$&%^
+
+--Melihat informasi partisi enkripsi--
+# cryptsetup luksDump /dev/sdb1
+
+--Menambah kunci---
+# cryptsetup luksAddKey /dev/sdb1
+
+--Menutup disk enkripsi---
+# cryptsetup luksClose /dev/sdb1
+
+8. Buka kunci enkripsi
+# cryptsetup luksOpen /dev/sdb1 sdb1_encrypted
+passphrase: 
+
+9. Format filesystem
+# mkfs.xfs -L DATA /dev/mapper/sdb1_encrypted
+
+10. Mount filesystem
+# mkdir /mnt/data
+# mount /dev/mapper/sdb1_encrypted /mnt/data
+# df -h
+
+===Hardening SSH Service===
+
+--Edit File Konfigurasi SSH Service--
+# vi /etc/ssh/sshd_config
+
+--Disable login root--
+PermitRootLogin no
+
+--Hanya Ijinkan User Tertentu--
+AllowUsers user1 user2
+
+--Hanya Pakai Protokol v2--
+Protocol 2
+
+--Pakai Port Selain 22--
+Port 2345
+
+# firewall-cmd --permanent --add-port 2345/tcp
+# firewall-cmd --reload
+# yum install policycoreutils-python
+# semanage port -a -t ssh_port_t -p tcp 2345
+
+--Restart Service SSH--
+# systemctl restart sshd
+
+===Konfigurasi HTTPS (mod_ssl)===
+
+1. Install paket httpd dan mod_ssl
+
+# yum install httpd mod_ssl
+
+2. Generate private key dan certificate
+# mkdir /etc/httpd/ssl
+# openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/httpd/ssl/idsirtii.key -out /etc/httpd/ssl/idsirtii.crt
+
+Country: ID
+State: DKI Jakarta
+City: Jakarta Pusat
+Company: IDSIRTII
+Section: IT Departement
+Hostname: *.idsirtii.go.id
+Email: admin@idsirtii.go.id
+
+3. Edit konfigurasi SSL
+# vi /etc/httpd/conf.d/ssl.conf
+DocumentRoot “/var/www/html”
+Servername www.idsirtii.go.id:443
+SSLCertificateFile /etc/httpd/ssl/idsirtii.crt
+SSLCertificateKeyFile /etc/httpd/ssl/idsirtii.key
+4. Start service httpd
+# systemctl start httpd
+# systemctl status httpd
+
+5. Ijinkan akses http dan https di firewall
+firewall-cmd --permanent --add-service http
+firewall-cmd --permanent --add-service https
+firewall-cmd --reload
+
+6. Uji browsing dari Host OS: http://10.10.10.10 dan https://10.10.10.10
+
+
+===Mode Vyos==
+
+1. Mode User
+vyos@vyos:~$
+
+2. Mode Config
+vyos@vyos:~$ configure 
+[edit]
+vyos@vyos# 
+
+===Cek Konfigurasi===
+
+vyos@vyos#  show
+
+===Konfigurasi IP===
+
+vyos@vyos#  set interfaces ethernet eth0 address 172.16.10.1/24
+vyos@vyos#  set interfaces ethernet eth1 address 192.168.10.1/24
+vyos@vyos#  set interfaces ethernet eth2 address 10.10.10.1/24
+vyos@vyos#  show interfaces ethernet 
+vyos@vyos#  commit
+vyos@vyos#  save
+vyos@vyos#  ping 172.16.10.10 ==> berhasil
+vyos@vyos#  ping 10.10.10.10 ==> berhasil
+
+
+
+
+
+
+===Mengaktifkan SSH===
+
+vyos@vyos# set service ssh port 4321
+vyos@vyos# commit
+vyos@vyos# save
+
+===Membuat User Baru===
+
+vyos@vyos# set system login user aku authentication plaintext-password rahasia
+vyos@vyos# set system login user aku level admin
+vyos@vyos# commit
+vyos@vyos# save
+vyos@vyos# show system login user
+
+===Hapus User vyos===
+
+Logout user vyos, Login user aku
+
+aku@vyos# del system login user vyos
+aku@vyos# commit
+aku@vyos# save
+aku@vyos# show system login user
+
+===Kosongkan Pre-Login Banner===
+
+aku@vyos# set system login banner pre-login ""
+
+
+===NAT (Network Address Translation)===
+
+1. SNAT (Source NAT)
+2. DNAT (Destination NAT)
+
+---SNAT Many to One (PAT)---
+Implementasi: Traffic dari LAN ke internet
+
+aku@vyos# set nat source rule 10 source address 192.168.10.0/24
+aku@vyos# set nat source rule 10 outbound-interface eth0
+aku@vyos# set nat source rule 10 translation address masquerade
+aku@vyos# commit
+aku@vyos# save
+aku@vyos# sh nat source
+
+---SNAT One to One---
+Implementasi: Traffic dari Server ke internet
+
+aku@vyos#  set interfaces ethernet eth0 address 172.16.10.11/24
+
+aku@vyos# set nat source rule 20 source address 10.10.10.10
+aku@vyos# set nat source rule 20 outbound-interface eth0
+aku@vyos# set nat source rule 20 translation address 172.16.10.11
+aku@vyos# commit
+aku@vyos# save
+aku@vyos# sh nat source
+
+Ping dari Server (10.10.10.10) ke Host OS
+
+aku@vyos# sh nat source translation
+
+---DNAT One to One===
+Implementasi: Traffic dari internet ke server
+
+aku@vyos# set nat destination rule 20 destination address 172.16.10.11
+aku@vyos# set nat destination rule 20 inbound-interface eth0
+aku@vyos# set nat destination rule 20 translation address 10.10.10.10
+aku@vyos# commit
+aku@vyos# save
+
+SSH dari Host OS ke Server (172.16.10.11)
+
+aku@vyos# sh nat destination translation
+
+
+===Zone Based Firewall===
+
+Zones:
+1. LOCAL
+2. OUTSIDE
+3. INSIDE
+4. DMZ
+
+LOCAL → OUTSIDE : Accept
+LOCAL → INSIDE : Accept
+LOCAL → DMZ : Accept
+
+OUTSIDE → LOCAL : Drop
+OUTSIDE → INSIDE : Drop
+OUTSIDE → DMZ : Drop
+
+INSIDE → LOCAL : Accept
+INSIDE → OUTSIDE : Accept
+INSIDE → DMZ : Accept
+
+DMZ → LOCAL : Accept
+DMZ → INSIDE : Drop
+DMZ → OUTSIDE: Accept
+
+1. Membuat rule default antar zone
+
+aku@vyos# set firewall name LOCAL_TO_OUTSIDE default-action accept
+aku@vyos# set firewall name LOCAL_TO_INSIDE default-action accept
+aku@vyos# set firewall name LOCAL_TO_DMZ default-action accept
+aku@vyos# set firewall name OUTSIDE_TO_LOCAL default-action drop
+aku@vyos# set firewall name OUTSIDE_TO_INSIDE default-action drop
+aku@vyos# set firewall name OUTSIDE_TO_DMZ default-action drop
+aku@vyos# set firewall name INSIDE_TO_LOCAL default-action accept
+aku@vyos# set firewall name INSIDE_TO_OUTSIDE default-action accept
+aku@vyos# set firewall name INSIDE_TO_DMZ default-action accept
+aku@vyos# set firewall name DMZ_TO_LOCAL default-action accept
+aku@vyos# set firewall name DMZ_TO_OUTSIDE default-action accept
+aku@vyos# set firewall name DMZ_TO_INSIDE default-action drop
+aku@vyos# commit
+aku@vyos# save
+aku@vyos# sh firewall
+
+2. Membuat zone policy
+
+
+aku@vyos# set zone-policy zone LOCAL local-zone
+aku@vyos# set zone-policy zone LOCAL from OUTSIDE firewall name OUTSIDE_TO_LOCAL
+aku@vyos# set zone-policy zone LOCAL from INSIDE firewall name INSIDE_TO_LOCAL
+aku@vyos# set zone-policy zone LOCAL from DMZ firewall name DMZ_TO_LOCAL
+
+aku@vyos# set zone-policy zone OUTSIDE interface eth0
+aku@vyos# set zone-policy zone OUTSIDE from LOCAL firewall name LOCAL_TO_OUTSIDE
+aku@vyos# set zone-policy zone OUTSIDE from INSIDE firewall name INSIDE_TO_OUTSIDE
+aku@vyos# set zone-policy zone OUTSIDE from DMZ firewall name DMZ_TO_OUTSIDE
+
+aku@vyos# set zone-policy zone INSIDE interface eth1
+aku@vyos# set zone-policy zone INSIDE from LOCAL firewall name LOCAL_TO_INSIDE
+aku@vyos# set zone-policy zone INSIDE from OUTSIDE firewall name OUTSIDE_TO_INSIDE
+aku@vyos# set zone-policy zone INSIDE from DMZ firewall name DMZ_TO_INSIDE
+
+aku@vyos# set zone-policy zone DMZ interface eth2
+aku@vyos# set zone-policy zone DMZ from LOCAL firewall name LOCAL_TO_DMZ
+aku@vyos# set zone-policy zone DMZ from OUTSIDE firewall name OUTSIDE_TO_DMZ
+aku@vyos# set zone-policy zone DMZ from INSIDE firewall name INSIDE_TO_DMZ
+
+aku@vyos# commit
+
+Ping dari Server ke Host OS → Gagal
+SSH dari Host OS ke Server (172.16.10.11) → Gagal
+
+3. Stateful firewall
+
+aku@vyos# set firewall state-policy established action accept
+aku@vyos# set firewall state-policy related action accept
+aku@vyos# set firewall state-policy invalid action drop
+
+aku@vyos# commit
+
+Ping dari Server ke Host OS → Berhasil
+SSH dari Host OS ke Server (172.16.10.11) → Gagal
+
+
+4. Membuat aturan spesifik (filtering)
+
+aku@vyos# set firewall name OUTSIDE_TO_DMZ rule 1 action accept
+aku@vyos# set firewall name OUTSIDE_TO_DMZ rule 1 destination address 10.10.10.10
+aku@vyos# set firewall name OUTSIDE_TO_DMZ rule 1 protocol tcp
+aku@vyos# set firewall name OUTSIDE_TO_DMZ rule 1 destination port 2345,80,443
+aku@vyos# set firewall name OUTSIDE_TO_DMZ rule 1 description “Accept SSH, HTTP, HTTPS dari Internet ke Server”
+
+aku@vyos# commit
+aku@vyos# show firewall name OUTSIDE_TO_DMZ
+aku@vyos# save
+
+SSH dari Host OS ke Server (172.16.10.11) → Berhasil
+
+aku@vyos# run show firewall statistics
+
+
+
+
+
+
+===Filter Group Address===
+
+Misal: info dari sistem lain SQL inject berasal dari 1.1.1.1, 2.2.2.2
+
+aku@vyos# set firewall group address-group ADDR_SQLINJ address 1.1.1.1
+aku@vyos# set firewall group address-group ADDR_SQLINJ address 2.2.2.2
+
+aku@vyos# set firewall name OUTSIDE_TO_DMZ rule 1 destination group address-group ADDR_SQLINJ
+aku@vyos# set firewall name OUTSIDE_TO_DMZ rule 1 action drop
+aku@vyos# commit
+
+
+===Trafiic Policy===
+
+aku@vyos# set traffic-policy shaper OUTSIDE-OUT bandwith 10Mbit
+aku@vyos# set traffic-policy shaper OUTSIDE-OUT default bandwith 50%
+aku@vyos# set traffic-policy shaper OUTSIDE-OUT default ceiling 100%
+aku@vyos# set traffic-policy shaper OUTSIDE-OUT default queue-type 
+fair-queue
+
+aku@vyos# set interfaces ethernet eth0 traffic-policy out OUTSIDE-OUT
+
+http://vyos.net/wiki/QoS
+
+
+===NG FW===
+
+Deep Packet Inspection
+
+Core:
+L7-Filter
+http://l7-filter.clearfoundation.com/
+ClearOS, Zeroshell, Untangle, Zentyal < v4
+https://www.google.com/url?q=https%3A%2F%2Fwww.flickr.com%2Fgroups%2Fgnomeasia2015%2Fpool%2Flibincharles&sa=D&sntz=1&usg=AFQjCNFMEUxW66PVXcomnM3muXGM_Zkacg
+
+NDPI
+http://www.ntop.org/products/deep-packet-inspection/ndpi/
+
+
+===IPS===
+Kriteria kerja IPS berdasarkan:
+~ Signature
+~ Anomali
+~ Custom policy
+
+Mode Implementasi:
+1. Promicious (IDS): Traffic dicopy. Filter dilakukan oleh Firewall.
+2. Inline (IPS): Traffic lewat IPS. Filter dilakukan oleh IPS.
+
+OSS IPS:
+~ OSSIM https://www.alienvault.com/open-threat-exchange/projects
+~ Security Union http://blog.securityonion.net/
+
+
+
+
+
+
+
+
+
+
+
+
+---Konfigurasi di VyOS---
+
+aku@vyos#  set interfaces ethernet eth0 address 172.16.10.12/24
+
+aku@vyos# set nat source rule 30 source address 10.10.10.11
+aku@vyos# set nat source rule 30 outbound-interface eth0
+aku@vyos# set nat source rule 30 translation address 172.16.10.12
+
+aku@vyos# set nat destination rule 30 destination address 172.16.10.12
+aku@vyos# set nat destination rule 30 inbound-interface eth0
+aku@vyos# set nat destination rule 30 translation address 10.10.10.11
+
+aku@vyos# set firewall name OUTSIDE_TO_DMZ rule 2 action accept
+aku@vyos# set firewall name OUTSIDE_TO_DMZ rule 2 destination address 10.10.10.11
+aku@vyos# set firewall name OUTSIDE_TO_DMZ rule 2 protocol tcp
+aku@vyos# set firewall name OUTSIDE_TO_DMZ rule 2 destination port 443
+aku@vyos# set firewall name OUTSIDE_TO_DMZ rule 2 description “Accept HTTPS dari Internet ke OSSIM”
+
+aku@vyos# commit
+aku@vyos# save
+
+Browsing dari Host OS ke OSSIM: https://172.16.10.12
+
+
+hydra -l root -p rahasia -u -s 2345 172.16.10.10 ssh
+
+
+===HA Cluster VyOS===
+
+---Konfigurasi FW1---
+
+aku@fw1# set system host-name fw1
+
+aku@fw1# set cluster dead-interval 10000
+aku@fw1# set cluster group cluster1 primary fw1
+aku@fw1# set cluster group cluster1 secondary fw2
+aku@fw1# set cluster group cluster1 monitor 172.16.10.10
+aku@fw1# set cluster group cluster1 monitor 10.10.10.10
+aku@fw1# set cluster group cluster1 service 172.16.10.51/24/eth0
+aku@fw1# set cluster group cluster1 service 10.10.10.51/24/eth2
+aku@fw1# set cluster group cluster1 auto-failback true
+aku@fw1# set cluster interface eth0
+aku@fw1# set cluster interface eth2
+aku@fw1# set cluster keepalive-interval 2000
+aku@fw1# set cluster pre-shared-secret rahasia
+
+---Konfigurasi FW2---
+
+aku@fw2# set system host-name fw2
+aku@fw2# set interfaces ethernet eth0 address 172.16.10.101/24
+aku@fw2# set interfaces ethernet eth2 address 10.10.10.101/24
+aku@fw2#  set interfaces ethernet eth0 address 172.16.10.11/24
+
+aku@fw2# set nat source rule 20 source address 10.10.10.10
+aku@fw2# set nat source rule 20 outbound-interface eth0
+aku@fw2# set nat source rule 20 translation address 172.16.10.11
+
+aku@fw2# set nat destination rule 20 destination address 172.16.10.11
+aku@fw2# set nat destination rule 20 inbound-interface eth0
+aku@fw2# set nat destination rule 20 translation address 10.10.10.10
+
+aku@fw2# set cluster dead-interval 10000
+aku@fw2# set cluster group cluster1 primary fw1
+aku@fw2# set cluster group cluster1 secondary fw2
+aku@fw2# set cluster group cluster1 monitor 172.16.10.10
+aku@fw2# set cluster group cluster1 monitor 10.10.10.10
+aku@fw2# set cluster group cluster1 service 172.16.10.51/24/eth0
+aku@fw2# set cluster group cluster1 service 10.10.10.51/24/eth2
+aku@fw2# set cluster group cluster1 auto-failback true
+aku@fw2# set cluster interface eth0
+aku@fw2# set cluster interface eth2
+aku@fw2# set cluster keepalive-interval 2000
+aku@fw2# set cluster pre-shared-secret rahasia
+
+Ubah gateway CentOS ke 10.10.10.51 dengan nmtui
+
+ping dari CentOS ke 172.16.10.10
+
+aku@fw1# run show cluster status
+aku@fw2# run show cluster status
+
+Reboot fw1 sambil pantau ping dari CentOS ke 172.16.10.10
+
+aku@fw2# run show cluster status
+
+
+SSH dari Host OS ke CentOS (172.16.10.11)
+
+aku@fw1# run show cluster status
+aku@fw2# run show cluster status
+
+Reboot fw1 sambil pantau SSH dari Host OS ke CentOS
+
+aku@fw2# run show cluster status
+
+
+SSO → OpenLDAP & SAMBA4/AD: Zentyal 4 http://www.zentyal.org
+Log Management → logstash http://logstash.net/
+Monitoring → Zenoss http://www.zenoss.org, Nagios http://www.nagios.org/
+Backup Restore → Amanda http://amanda.zmanda.com/, Bacula http://www.bacula.org/
+
+Firewall:
+alpine
+endian
+ipfire
+pfsense
+shopos      
+gibraltar
+m0n0wall
+redwall
+smoothwall
+vyos
+clearos
+ipcop
+untangle
+zeroshell
+
+
+
