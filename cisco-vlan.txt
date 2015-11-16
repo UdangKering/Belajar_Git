@@ -1,0 +1,158 @@
+Cisco Vlan 
+
+- Vlan = untuk memecah broadcast domain di Layer 2
+- Bisa membuat multiple VLAN (1 switch banyak vlan)
+- Setiap vlan punya IP Network sendiri
+- Setiap VLAN hanya bisa berhubungan melalui router, tapi bisa juga make switch L3
+- VLAN di buat di dalam switch
+- Kmputer yang terhubung di vlan tidak tahu bahwa dia di VLan 2
+Saat ngirim data, switch vlan akan menambah tag pada frame dari komputer
+
+Keuntungan VLAN:
+- Aman karena broadcast domain kecil dan dari sniffing
+- Mengurangi Biaya perangkat
+- Performa network
+- Memperkecil broadcast domain
+- Efisiensi dalam mengontrol jaringan
+
+Tipe Vlan
+- Data VLAN 
+- Default VLAN 
+- Native VLAN
+- Management VLAN 
+
+VLAN Mode Switchport
+- Trunk = Port yang menghubungkan antar switch
+- Access = Port yang menghubungkan antar komputer
+
+VLAN Trunk
+- Dia menjembatani antar vlan
+- Menghubungkan antar switch vlan
+- Trunk tidak masuk ke vlan mana pun
+
+VTP
+Komputer --- Switch vlan (dibungkus paketnya jadi vlan 2) --- oper ke trunk (dibungkus pake pake id native vlan, tidak bawa id vlan 2) --- sampe ke switch sebelah (buka frame native vlan) --- oper ke vlan 2
+
+Bandwidth Cable
+- Cat 53 = 100mbps
+- Cat 6 = 1000mbps
+- FO = 100 Gbps
+
+DTP (Dynamic Trunking Protocol)
+- Hanya di cisco
+- Untuk me manage negosiasi trunk
+- Sudah ada lama daroi Cisco 2960
+
+
+Config Core Switch jadi server
+# configure terminal
+# vtp mode server 
+# vtp domain sabtocorp
+# vtp password 123
+# end
+# copy running-config startup-config
+
+Config Core Switch bikin trunk
+# interface range fastEthernet 0/1-4
+# switchport mode trunk 
+# switchport trunk native vlan 69
+# end
+# copy running-config startup-config
+# conf terminal
+# vlan 2
+# name hrd
+# vlan 3
+# name ga
+
+Config Switch lantai 1
+# configure terminal 
+# interface fastEthernet 0/1
+# switchport mode trunk 
+# switchport trunk native vlan 69
+# vtp mode client
+# vtp domain sabtocorp
+# vtp password 123
+# end
+# copy running-config startup-config
+
+(Secara otomatis database VLAN di Core switch masuk di Switch client)
+
+Config Switch lantai 2
+# configure terminal 
+# interface fastEthernet 0/1
+# switchport mode trunk 
+# switchport trunk native vlan 69
+# vtp mode client
+# vtp domain sabtocorp
+# vtp password 123
+# end
+# copy running-config startup-config
+
+Config Switch lantai 3
+# configure terminal 
+# interface fastEthernet 0/1
+# switchport mode trunk 
+# switchport trunk native vlan 69
+# vtp mode client
+# vtp domain sabtocorp
+# vtp password 123
+# end
+# copy running-config startup-config
+
+Config Switch lantai 4
+# configure terminal 
+# interface fastEthernet 0/1
+# switchport mode trunk 
+# switchport trunk native vlan 69
+# vtp mode client
+# vtp domain sabtocorp
+# vtp password 123
+# end
+# copy running-config startup-config
+
+Config switch lantai 1 buat vlan
+#interface range fastEthernet 0/2-3
+#switchport mode access 
+#switchport access vlan 2
+#end
+#interface range fastEthernet 0/4-5
+#switchport mode access 
+#switchport access vlan 3
+#end
+# copy running-config startup-config
+
+Config CoreSwitch
+#interface gigabitEthernet 0/1
+#switchport mode trunk 
+#switchport trunk native vlan 69
+#end
+#copy running-config startup-config
+
+Config Router Utama R1
+#interface gigabitEthernet 0/1
+#no shutdown 
+#exit
+#interface gigabitEthernet 0/1.2
+#encapsulation dot1Q 2
+#ip address 192.168.2.1 255.255.255.0
+#interface gigabitEthernet 0/1.3
+#encapsulation dot1Q 3
+#ip address 192.168.3.1 255.255.255.0
+#interface gigabitEthernet 0/1.4
+#encapsulation dot1Q 4
+#ip address 192.168.4.1 255.255.255.0
+#interface gigabitEthernet 0/1.5
+#encapsulation dot1Q 5
+#ip address 192.168.5.1 255.255.255.0
+#interface gigabitEthernet 0/1.6
+#encapsulation dot1Q 6
+#ip address 192.168.6.1 255.255.255.0
+#interface gigabitEthernet 0/1.7
+#encapsulation dot1Q 7
+#ip address 192.168.7.1 255.255.255.0
+#interface gigabitEthernet 0/1.8
+#encapsulation dot1Q 8
+#ip address 192.168.8.1 255.255.255.0
+#interface gigabitEthernet 0/1.9
+#encapsulation dot1Q 9
+#ip address 192.168.9.1 255.255.255.0
