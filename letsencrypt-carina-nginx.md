@@ -1,5 +1,4 @@
 ## Prasyarat:
-
 - Docker host atau cluster Carina https://getcarina.com/
 - Docker klien saya mengunakan versi berikut
 ary@fuleco:~$ docker --version
@@ -83,7 +82,7 @@ server {
 }
 
 ## Isi berkas index.html
-Encrypted!
+Udah Encrypted gan!
 
 ## Isi berkas Dockerfile default.conf
 FROM nginx
@@ -113,3 +112,4 @@ https://www.ssllabs.com/ssltest/analyze.html?d=kelas.glibogor.or.id&latest
 - https://getcarina.com/blog/weekly-news-docker-sock-letsencrypt/#note-for-previous-docker-versions
 - https://hub.docker.com/_/nginx/
 
+#MalMingGLiB - Sabtu, 14 Mei 2016
