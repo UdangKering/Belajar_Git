@@ -97,7 +97,7 @@ docker images
 
 ## Buat docker container, dengan image yang sudah dibuat tadi serta menghubungkan volume letsencrypt 
 docker run -d -p 80:80 -p 443:443 \
-  -v letsencrypt:/etc/letsencrypt --name nginx imageglib
+  -v letsencrypt:/etc/letsencrypt --name containerglib imageglib
 
 ## Verifikasi 
 curl https://kelas.glibogor.or.id
